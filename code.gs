@@ -1,181 +1,226 @@
 
-function processFormData(data) {
-  const folderId = '1A_YUkMwWikOLq0kxQ3WY-f4M9IoJkWoV';
-  const folder = DriveApp.getFolderById(folderId);
-
-  // Upload primary file
-  const blob = Utilities.newBlob(Utilities.base64Decode(data.fileData), MimeType.PDF, data.fileName);
-  const file = folder.createFile(blob);
-  const fileUrl = file.getUrl();
-
-  let revisedFileName = '';
-  let revisedFileUrl = '';
-
-  // If resubmission, upload revised file
-  if (data.isResubmission && data.revisedFileData && data.revisedFileName) {
-    const revisedBlob = Utilities.newBlob(
-      Utilities.base64Decode(data.revisedFileData),
-      MimeType.PDF,
-      data.revisedFileName
-    );
-    const revisedFile = folder.createFile(revisedBlob);
-    revisedFileName = data.revisedFileName;
-    revisedFileUrl = revisedFile.getUrl();
-  }
-
-  const now = new Date();
-  const refNumber = generateReferenceNumber();
-
-  const timestamp = now;
-  const name = data.name;
-  const email = data.email;
-  const email1 = data.email1;
-  const memoType = data.memoType;
-  const dateType = data.dateType;
-  const subjectmemo = data.additionalMemoInfo;
-  const addprop = data.otherExtraOption;
-
-  const formattedDate = Utilities.formatDate(new Date(dateType), Session.getScriptTimeZone(), "MMM d, yyyy");
-
-  let rowData = [
-    refNumber,
-    timestamp,
-    name,
-    email,
-    memoType,
-    email1,
-    subjectmemo,
-    dateType,
-    data.fileName,
-    fileUrl
-  ];
-
-  rowData.push(...data.additionalOptions);
-  rowData.push(addprop);
-  rowData.push(...data.departments);
-  rowData.push(...data.approvers);
-
-  // Push revised file name and URL if available
-  if (revisedFileName && revisedFileUrl) {
-    rowData.push(revisedFileName);
-    rowData.push(revisedFileUrl);
-  }
-
-  // Limit total columns to 58 (adjust if needed)
-  rowData = rowData.slice(0, 60);
-
-  const spreadsheet = SpreadsheetApp.openById('1GLdze5owg9I3QdaaHfzd89it0ZvkKkufMcKlO-tzvnY');
-  const sheet = spreadsheet.getSheetByName('Conso');
-
+function getSheetData(sheetName) {
+  const spreadsheet = SpreadsheetApp.openById("1GLdze5owg9I3QdaaHfzd89it0ZvkKkufMcKlO-tzvnY");
+  const sheet = spreadsheet.getSheetByName(sheetName);
   if (!sheet) {
-    throw new Error('Sheet named "Conso" does not exist.');
-  }
-
-  // ==== Check for spreadsheet size limit ====
-  if (isSheetNearLimit(sheet, rowData.length)) {
-    throw new Error('Cannot save data: Spreadsheet has reached or is near the 10 million cell limit.');
+    Logger.log(`Sheet "${sheetName}" not found.`);
+    return null;
   }
 
   const lastRow = sheet.getLastRow();
-  const range = sheet.getRange(1, 5, lastRow + 1000, 60); // Start from column E
-  const values = range.getValues();
+  if (lastRow < 1) return null;
 
-  let targetRow = 0;
-  for (let i = 0; i < values.length; i++) {
-    const row = values[i];
-    const isEmpty = row.every(cell => cell === '' || cell === null);
-    if (isEmpty) {
-      targetRow = i + 1;
-      break;
+  const range = sheet.getRange(1, 1, lastRow, 62); // A to BJ
+  const data = range.getValues();
+
+  const cleanedData = data.map(row => row.map(cell => {
+    if (cell instanceof Date) {
+      return Utilities.formatDate(cell, Session.getScriptTimeZone(), "MMM d, yyyy hh:mm a");
+    }
+    return String(cell).trim();
+  }));
+
+  const filteredData = cleanedData.filter(row => {
+    const statusColA = row[0];
+    const statusColF = row[5];
+    const colJ = row[9]; // Column J is index 9
+
+    // Exclude if column A is APPROVED or DISAPPROVED
+    if (statusColA === "APPROVED" || statusColA === "DISAPPROVED") return false;
+    if (statusColF === "APPROVED" || statusColF === "DISAPPROVED") return false;
+    console.log("statusColF:", statusColF);
+
+
+    
+
+
+    // Exclude if column J is empty
+    if (!colJ) return false;
+
+    // Include row only if it has any non-empty cell
+    return row.some(cell => cell !== "");
+  }).map(row => row.slice(4)); // Show data from column E onward
+
+  Logger.log('Filtered Data: ' + JSON.stringify(filteredData));
+  return filteredData.length > 0 ? filteredData : null;
+}
+
+
+
+
+function updateRowStatusWithValidation(rowData, status, reason, approvalReason, sheetName) {
+  const spreadsheet = SpreadsheetApp.openById("1GLdze5owg9I3QdaaHfzd89it0ZvkKkufMcKlO-tzvnY");
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  if (!sheet) throw new Error(`Sheet "${sheetName}" not found.`);
+
+  const data = sheet.getDataRange().getValues();
+
+  //Match using reference number (column J = index 9)
+  const referenceNumberToMatch = String(rowData[0]).trim();
+  Logger.log(`Looking for reference: "${referenceNumberToMatch}" in sheet "${sheetName}"`);
+
+  const timestamp = new Date();
+  const formattedTimestamp = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), "MMM d, yyyy HH:mm");
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const referenceNumber = String(row[9]).trim(); // Column J in target sheet
+
+    Logger.log(`Row ${i + 1} - Checking reference: "${referenceNumber}"`);
+
+    if (referenceNumber === referenceNumberToMatch) {
+      const rowToUpdate = i + 1;
+
+      // Update columns
+      const statusCol = 1;
+      const reasonCol = 2;
+      const timeCol = 3;
+      const intervalCol = 4;
+      const remarksCol = 2;
+
+      // Decide which to save based on status
+      const remarks = status === "DISAPPROVED" ? reason : approvalReason;
+
+      // Then save only one
+      sheet.getRange(rowToUpdate, remarksCol).setValue(remarks || '');
+
+      sheet.getRange(rowToUpdate, statusCol).setValue(status);
+
+      sheet.getRange(rowToUpdate, timeCol).setValue(formattedTimestamp);
+
+      const colBValue = row[1];
+      if (colBValue) {
+        const startDate = new Date(colBValue);
+        const diffTime = timestamp - startDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        sheet.getRange(rowToUpdate, intervalCol).setValue(diffDays);
+      } else {
+        sheet.getRange(rowToUpdate, intervalCol).setValue('');
+      }
+
+      Logger.log('Match found and row updated.');
+      return true;
     }
   }
 
-  if (targetRow === 0) {
-    targetRow = lastRow + 1;
-  }
+  Logger.log('No match found for reference number: "' + referenceNumberToMatch + '"');
+  throw new Error('No matching row found to update.');
+}
 
-  try {
-    sheet.getRange(targetRow, 5, 1, rowData.length).setValues([rowData]); // Start from column E
-  } catch (err) {
-    if (err.message.includes('above the limit of 10000000')) {
-      throw new Error('Cannot save data: Spreadsheet has exceeded the 10 million cell limit.');
+// NEW Multi-user Authentication
+function authenticateUser(username, password) {
+  const users = {
+    'GMC': { password: 'pass1', displayName: 'Graham Coates', sheet: 'GMC' },
+    'RCS': { password: 'pass2', displayName: 'Rosalyn Segura', sheet: 'RCS' },
+    'MGL': { password: 'pass3', displayName: 'Michael Lao', sheet: 'MGL' },
+    'MLP': { password: 'pass3a', displayName: 'Louise Piamonte', sheet: 'MGL' },
+    'KMV': { password: 'pass4', displayName: 'Tinay Villanueva', sheet: 'KMV' },
+    'LDA': { password: 'pass5', displayName: 'Lorence Aurelio', sheet: 'LDA' },
+    'JAYE': { password: 'pass6', displayName: 'Jaye Pizarro', sheet: 'JAYE' },
+    'JOY': { password: 'pass7', displayName: 'Jocelyn Melitante', sheet: 'JOY' },
+    'ALEX': { password: 'pass8', displayName: 'Alex Flores', sheet: 'ALEX' },
+    'AU': { password: 'pass9', displayName: 'Aurora Palostero', sheet: 'AU' },
+    'MAR': { password: 'pass10', displayName: 'Mariano Caleja', sheet: 'MAR' },
+    'EBA': { password: 'pass11', displayName: 'Ernesto Andrade', sheet: 'EBA' },
+    'DSM': { password: 'pass12', displayName: 'Dustin Sta. Maria', sheet: 'DSM' },
+    'JAC': { password: 'pass13', displayName: 'Jenel Ann Cruzgarcia', sheet: 'JAC' },
+    'DP': { password: 'pass14', displayName: 'Doreen Penilla', sheet: 'DP' },
+    'FA': { password: 'pass15', displayName: 'Frances Armian', sheet: 'FA' },
+    'DM': { password: 'pass16', displayName: 'Denisse Malong', sheet: 'DM' },
+    'KL': { password: 'pass17', displayName: 'Kevin Lin', sheet: 'KL' },
+    'JM': { password: 'pass18', displayName: 'Juvi Masilungan', sheet: 'JM' },
+    'JG': { password: 'pass19', displayName: 'Jhoanalyn Gatdula', sheet: 'JG' },
+    'MA': { password: 'pass20', displayName: 'Mary Arceo', sheet: 'MA' },
+    'JLC': { password: 'luther2024', displayName: 'Jeron Luther Castro', sheet: 'GMC' },
+  };
+
+  const user = users[username];
+  if (user && user.password === password) {
+    return { displayName: user.displayName, sheet: user.sheet };
+  }
+  return null;
+}
+function submitApproverValues(data) {
+  const spreadsheet = SpreadsheetApp.openById("1GLdze5owg9I3QdaaHfzd89it0ZvkKkufMcKlO-tzvnY");
+  const sheet = spreadsheet.getSheetByName("Conso");
+
+  if (!sheet) throw new Error("Sheet 'Conso' not found.");
+
+  const referenceNumber = data.referenceNumber;
+  const rawApproverValues = data.approverValues;
+
+  Logger.log("Incoming data: %s", JSON.stringify(data));
+
+  // Normalize: convert string values to objects { label, value }
+  const normalizedApprovers = (rawApproverValues || []).map(val => {
+    if (typeof val === 'string') {
+      return { label: val, value: val };
+    } else if (val && typeof val === 'object' && val.value) {
+      return val;
     } else {
-      throw err;
+      return null;
     }
+  }).filter(val => val && typeof val.value === 'string' && val.value.trim() !== "");
+
+  if (!referenceNumber || normalizedApprovers.length === 0) {
+    throw new Error("Submission aborted: No valid approvers selected or reference number is missing.");
   }
 
-  // === EMAIL CONFIRMATION ===
-  const subject = `📨 Memo Submitted - Reference: ${refNumber}`;
-  const htmlMessage = `
-    <div style="font-family: Arial, sans-serif; padding: 10px;">
-      <table width="100%" style="margin-bottom: 20px;">
-        <tr>
-          <td align="center">
-            <img src="https://images.contentstack.io/v3/assets/blt827157d7af7bc6d4/blt539b6710c5d23513/63306748763d011cd3e925bd/megaworld-logo.png" 
-                 alt="Header Image" 
-                 style="max-width: 600px; width: 100%; height: auto; display: block;">
-          </td>
-        </tr>
-      </table>
+  const lastRow = sheet.getLastRow();
+  const refColumn = sheet.getRange("E2:E" + lastRow).getValues();
+  const startRow = 2;
 
-      <p>Hi <strong>${name}</strong>,</p>
-      <p>Your memo has been <span style="color:green;"><strong>successfully submitted</strong></span>.</p>
+  const matchRowIndex = refColumn.findIndex(row => row[0] === referenceNumber);
+  Logger.log("Searching for reference number: " + referenceNumber);
 
-      <table style="border-collapse: collapse; margin-top: 10px;">
-        <tr><td style="padding: 4px;"><strong>Subject:</strong></td><td style="padding: 4px;">${subjectmemo}</td></tr>
-        <tr><td style="padding: 4px;"><strong>Date of Memo:</strong></td><td style="padding: 4px;">${formattedDate}</td></tr>
-        <tr><td style="padding: 4px;"><strong>Preparer of Memo:</strong></td><td style="padding: 4px;">${memoType}</td></tr>
-        <tr><td style="padding: 4px;"><strong>Reference No.:</strong></td><td style="padding: 4px; font-weight: bold;">${refNumber}</td></tr>
-      </table>
-
-      <p><i>Please save this reference number for your records.</i></p>
-      <p style="margin-top: 16px;">You may access the uploaded file <a href="${fileUrl}" target="_blank">here</a>.</p>
-      
-      <p style="margin-top: 30px; text-align: center;">
-        <hr style="margin-top: 30px; border: none; border-top: 1px solid #eee;">
-        <small style="color: #888;">This is an automated message. Please do not reply to this email.</small>
-      </p>
-    </div>
-  `;
-
-  const recipients = [email, email1].filter(e => e).join(',');
-  if (recipients) {
-    MailApp.sendEmail({
-      to: email,
-      cc: email1,
-      subject: subject,
-      htmlBody: htmlMessage,
-      name: "MCD Memo Submission Notification"
-    });
+  if (matchRowIndex === -1) {
+    throw new Error(`Reference number '${referenceNumber}' not found in column E.`);
   }
 
-  return refNumber;
+const actualRow = matchRowIndex + startRow;
+Logger.log("Matched reference number at row: " + actualRow);
+
+const targetRange = sheet.getRange(actualRow, 16, 1, 46); // P (16) to BI (61) = 61 - 16 + 1 = 46 columns
+const rowData = targetRange.getValues()[0];
+Logger.log("Existing row data (P:BI): %s", JSON.stringify(rowData));
+
+// Check for duplicates
+const duplicates = normalizedApprovers.filter(a => rowData.includes(a.value));
+if (duplicates.length > 0) {
+  const duplicateLabels = duplicates.map(a => a.label || a.value);
+  throw new Error(`The following approver(s) are already in the list: ${duplicateLabels.join(", ")}`);
 }
 
-// ==== Helper function to check cell usage ====
-function isSheetNearLimit(sheet, rowDataLength) {
-  const spreadsheet = sheet.getParent();
-  const totalCells = spreadsheet.getSheets()
-    .map(s => s.getMaxRows() * s.getMaxColumns())
-    .reduce((a, b) => a + b, 0);
-
-  const newCells = 1 * rowDataLength; // Writing 1 row
-  return (totalCells + newCells >= 10000000);
+// Check for space
+const emptySlots = rowData.filter(val => !val || val.toString().trim() === "").length;
+if (emptySlots === 0) {
+  throw new Error("All approvers are already included — no empty slots in P:BI.");
 }
 
-// Global Set to store already used reference numbers (in-memory for this example)
-const usedReferenceNumbers = new Set();
 
-// Generate a unique reference number like REF#******, where "******" is a 6 alphanumeric string
-function generateReferenceNumber() {
-  let randomStr;
+  // Insert values
+  let insertIndex = 0;
+  for (let approver of normalizedApprovers) {
+    while (insertIndex < rowData.length && rowData[insertIndex]) {
+      insertIndex++;
+    }
 
-  // Ensure uniqueness by checking if the generated string already exists
-  do {
-    randomStr = Math.random().toString(36).substring(2, 8).toUpperCase(); // 6 alphanumeric characters
-  } while (usedReferenceNumbers.has(randomStr)); // Keep generating until unique
+    if (insertIndex >= rowData.length) {
+      throw new Error("No available columns (P:BI) left to insert new approvers.");
+    }
 
-  usedReferenceNumbers.add(randomStr);
+    Logger.log("Inserting approver '%s' at column offset: %s", approver.value, insertIndex);
+    rowData[insertIndex] = approver.value;
+    insertIndex++;
+  }
 
-  return `REF#${randomStr}`;
+  sheet.getRange(actualRow, 16, 1, 46).setValues([rowData]);
+  Logger.log("✅ Successfully wrote approvers to sheet.");
+  
 }
+
+
+
+
+
+
