@@ -1,541 +1,1234 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MCD Memo Routing</title>
 
-<head>
-  <meta charset="UTF-8">
-  <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Polyfill for better browser support -->
+    <script src="https://cdn.jsdelivr.net/npm/core-js-bundle@3.23.5/minified.js"></script>
 
-  <!-- Vue.js -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16"></script>
-
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-
-  <style>
-    body {
-      background-color: #f9fafa;
-      font-family: 'Segoe UI', sans-serif;
-    }
-
-    .app-wrapper {
-      max-width: 800px;
-      margin: 40px auto;
-    }
-
-    .section-header {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-    }
-
-    .card {
-      border-radius: 10px;
-      border: none;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-    }
-
-    .form-check-input:checked {
-      background-color: #0d6efd;
-      border-color: #0d6efd;
-    }
-
-    .sub-section {
-      animation: fadeIn 0.3s ease-in-out;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .badge-label {
-      font-size: 0.85rem;
-      padding: 0.4em 0.6em;
-    }
-
-    .list-group-sm .list-group-item {
-      font-size: 0.95rem;
-      padding: 0.4rem 0.75rem;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="text-center mb-4">
-    <img
-      src="https://images.contentstack.io/v3/assets/blt827157d7af7bc6d4/blt539b6710c5d23513/63306748763d011cd3e925bd/megaworld-logo.png"
-      alt="Header Image"
-      class="img-fluid"
-      style="max-width: 100%; width: 600px"
+    <!-- Vue.js and Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
     />
-  </div>
 
-  <div id="app" class="app-wrapper">
-    <div class="text-center">
-      <h1>MCD Memo Routing</h1>
+    <style>
+      body {
+        background-color: #f4f6f9;
+        font-family: Arial, sans-serif;
+      }
+      .table-wrapper {
+        max-height: 400px;
+        overflow-y: auto;
+        position: relative;
+      }
+      thead th {
+        position: sticky;
+        top: 0;
+        background-color: lightgrey !important;
+        color: black;
+        z-index: 1;
+      }
+      table {
+        font-size: 0.9rem;
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        padding: 0.75rem;
+        text-align: center;
+        vertical-align: middle;
+      }
+      th {
+        background-color: #007bff;
+        color: white;
+      }
+      td {
+        background-color: #f8f9fa;
+      }
+      .btn {
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+      }
+      .btn-success {
+        background-color: #28a745;
+        border: none;
+      }
+      .btn-danger {
+        background-color: #dc3545;
+        border: none;
+      }
+      .btn:hover {
+        opacity: 0.8;
+      }
+      .disapprove-reason {
+        margin-top: 10px;
+        width: 100%;
+        height: 80px;
+      }
+      .reason-submit-btn {
+        margin-top: 10px;
+      }
+      .search-input {
+        margin-bottom: 20px;
+        width: 100%;
+        padding: 0.5rem;
+        font-size: 1rem;
+        border-radius: 4px;
+      }
+      .error {
+        color: red;
+      }
+      .loading-spinner {
+        width: 24px;
+        height: 24px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        animation: spin 2s linear infinite;
+        margin: 0 auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .btn-grey {
+        color: #fff;
+        background-color: #6c757d; /* Bootstrap secondary gray color */
+        border-color: #6c757d;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="text-center mb-4">
+      <img
+        src="https://images.contentstack.io/v3/assets/blt827157d7af7bc6d4/blt539b6710c5d23513/63306748763d011cd3e925bd/megaworld-logo.png"
+        alt="Header Image"
+        class="img-fluid"
+        style="max-width: 100%; width: 600px"
+      />
     </div>
 
-    <div class="card p-4 mt-4">
-      <div class="section-header mb-3">
-        <i class="bi bi-person-lines-fill"></i> Requestor Information
-      </div>
-
-      <div class="mb-3">
-        <label for="name" class="form-label">Uploader Name</label>
-        <input type="text" class="form-control" id="name" v-model="formData.name" placeholder="Enter your full name">
-      </div>
-
-      <div class="mb-3">
-        <label for="email" class="form-label">Uploader Email Address</label>
-        <input type="email" class="form-control" id="email" v-model="formData.email" placeholder="name@example.com">
-      </div>
-
-      <div class="mb-3">
-        <label for="memoType" class="form-label">Memo Preparer</label>
-        <input type="text" class="form-control" id="memoType" v-model="formData.memoType" placeholder="Enter preparer name">
-      </div>
-
-      <div class="mb-3">
-        <label for="email" class="form-label">Memo Preparer Email Address</label>
-        <input type="email" class="form-control" id="email1" v-model="formData.email1" placeholder="name@example.com">
-      </div>
-
-      <div class="mb-3">
-        <label for="dateType" class="form-label">Date Indicated in the Memo:</label>
-        <input type="date" class="form-control" id="memoType" v-model="formData.dateType">
-      </div>
-
-
-      <div class="mb-3">
-        <label for="additionalMemoInfo" class="form-label">Subject of the Memo</label>
-        <textarea class="form-control" id="additionalMemoInfo" v-model="formData.additionalMemoInfo" placeholder="Enter Subject of the Memo..."></textarea>
-        Can't find the subject of the memo? <a
-          href="https://drive.google.com/file/d/1ZRqxk2BtbkoLc_yQr-fnuDA2t5MNnCvh/view?usp=sharing" target="_blank"
-          class="mt-2 d-inline-block"> Click here</a>
-      </div>
-
-      <!-- New Checkbox Grid -->
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Select Property/Coverage</label>
-        <div class="row">
-          <div class="col-md-4 mb-2" v-for="option in extraOptions" :key="option.value">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" :id="option.value" :value="option.value" v-model="selectedExtras">
-              <label class="form-check-label" :for="option.value">{{ option.label }}</label>
+    <div id="app" class="container mt-4">
+      <!-- LOGIN FORM -->
+      <div
+        v-if="!isLoggedIn"
+        class="d-flex justify-content-center align-items-center"
+        style="min-height: 60vh"
+      >
+        <div class="card p-4" style="width: 100%; max-width: 650px">
+          <h2 class="text-center">MCD Memo Routing</h2>
+          <div class="card-body">
+            <h3 class="card-title text-center mb-4">Login</h3>
+            <div class="mb-3">
+              <input
+                v-model="username"
+                type="text"
+                placeholder="Username"
+                class="form-control"
+                required
+              />
             </div>
+            <div class="mb-3">
+              <input
+                v-model="password"
+                type="password"
+                placeholder="Password"
+                class="form-control"
+                required
+              />
+            </div>
+            <button
+              @click="login"
+              :disabled="!isFormValid || isLoggingIn"
+              class="btn btn-primary w-100"
+            >
+              <span
+                v-if="isLoggingIn"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              <span v-else>Login</span>
+            </button>
+            <p v-if="loginError" class="error mt-2 text-center">
+              Invalid username or password format.
+            </p>
           </div>
         </div>
-        <!-- Optional "Other" Text Field -->
-        <div class="mt-3">
-          <label for="otherExtra" class="form-label">Other (if not listed above)</label>
-          <input
-      type="text"
-      id="otherExtra"
-      class="form-control"
-      v-model="otherExtraOption"
-      placeholder="Specify other department or team..."
-    />
+      </div>
+
+      <!-- MAIN CONTENT AFTER LOGIN -->
+      <div v-else>
+        <p class="lead mb-4">{{ greetingMessage }}</p>
+        <h2 class="text-center">MCD Memo Routing</h2>
+        <br />
+
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="search-input"
+          placeholder="Search table..."
+        />
+
+        <div v-if="!isDataLoaded" class="text-center">
+          <div class="loading-spinner"></div>
+          <p>Loading data...</p>
+        </div>
+
+        <div v-else class="table-wrapper mb-5">
+          <p v-if="filteredData.length === 0" class="text-center text-muted">
+            No data available
+          </p>
+
+          <table class="table table-bordered" v-if="filteredData.length > 0">
+            <thead class="thead-light">
+              <tr>
+                <th v-for="(header, index) in headers" :key="index">
+                  {{ header }}
+                </th>
+                <th>Days Since</th>
+                <!-- New column header -->
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in filteredData" :key="index">
+                <td v-for="(cell, i) in row" :key="i">
+                  <template v-if="i === 9 && cell">
+                    <a :href="cell" target="_blank">MEMO</a>
+                  </template>
+                  <template v-else> {{ cell }} </template>
+                </td>
+                <td>
+                  <!-- Calculate the difference between today's date and the date in column 0 -->
+                  <span> {{ calculateDaysDifference(row[1]) }} </span>
+                </td>
+                <td>
+                  <div class="d-flex flex-column gap-2">
+                    <button
+                      @click="approve(row)"
+                      class="btn btn-success btn-sm"
+                      :disabled="showReasonInput || showApprovalInput || showAddApproverInput"
+                    >
+                      Approve
+                    </button>
+
+                    <button
+                      @click="disapprove(row)"
+                      class="btn btn-danger btn-sm"
+                      :disabled="showReasonInput || showApprovalInput || showAddApproverInput"
+                    >
+                      Disapprove
+                    </button>
+
+                    <button
+                      @click="addApproverReviewer(row)"
+                      class="btn btn-warning btn-sm"
+                      :disabled="showReasonInput || showApprovalInput || showAddApproverInput"
+                    >
+                      Add Reviewer
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          v-if="showAddApproverInput"
+          class="mt-3 mb-5"
+          ref="reasonInputSection"
+        >
+          <label class="form-label">Add Reviewer for: {{ labelValue }}</label>
+
+          <div
+            class="form-check"
+            v-for="reason in availableApproverReasons"
+            :key="reason.value"
+          >
+            <input
+              class="form-check-input"
+              type="checkbox"
+              :value="reason.value"
+              v-model="selectedApproverReasons"
+              :id="'reason-' + reason.value"
+            />
+            <label class="form-check-label" :for="'reason-' + reason.value">
+              {{ reason.label }}
+            </label>
+          </div>
+          <div>Selected Approvers: {{ selectedApproverLabels.join(', ') }}</div>
+
+          <div class="mt-3">
+            <button
+              @click="handleSubmitAndRefresh"
+              :disabled="isSubmitting || selectedApproverReasons.length === 0"
+              class="btn btn-warning me-2"
+            >
+              <span
+                v-if="isSubmitting"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              <span v-else>Submit</span>
+            </button>
+
+            <button class="btn btn-secondary" @click="cancelAddApprover">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <div v-if="showReasonInput" class="mt-3 mb-5" ref="reasonInputSection">
+          <label class="form-label"
+            >Disapproval Reason for: {{ labelValue }}</label
+          >
+          <textarea
+            v-model="reason"
+            class="form-control disapprove-reason"
+            placeholder="Please provide a reason for disapproval..."
+          ></textarea>
+
+          <div class="mt-3">
+            <button
+              @click="submitDisapproval"
+              :disabled="isSubmitting"
+              class="btn btn-danger me-2"
+            >
+              <span
+                v-if="isSubmitting"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              <span v-else>Submit Disapproval</span>
+            </button>
+
+            <!-- Cancel button -->
+            <button class="btn btn-secondary" @click="cancelDisapproval">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-if="showApprovalInput"
+          class="mt-3 mb-5"
+          ref="approvalInputSection"
+        >
+          <label class="form-label"
+            >Approval Remarks for: {{ labelValue }}</label
+          >
+          <textarea
+            v-model="approvalReason"
+            class="form-control"
+            placeholder="Enter remarks for approval..."
+          ></textarea>
+
+          <div class="mt-3">
+            <button
+              @click="submitApproval"
+              :disabled="isSubmitting"
+              class="btn btn-success me-2"
+            >
+              <span
+                v-if="isSubmitting"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              <span v-else>Submit Approval</span>
+            </button>
+
+            <!-- Cancel button -->
+            <button class="btn btn-secondary" @click="cancelApproval">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
-
     </div>
 
-    <hr>
-
-
-    <!-- Main Departments -->
-    <div class="card p-4 mb-4">
-      <div class="section-header">
-        <i class="bi bi-diagram-3"></i> Memo Routing Path
-      </div>
-      <p class="text-muted mb-3">Select department head/s that need to approve this memo:</p>
-      <div v-for="item in mainCheckboxes" :key="item.value" class="form-check mb-2">
-        <input class="form-check-input" type="checkbox" :id="item.value" :value="item.value" v-model="selectedMain">
-        <label class="form-check-label fw-semibold" :for="item.value">{{ item.label }}</label>
-      </div>
-    </div>
-
-    <!-- Sub-Approvers -->
-    <div v-if="selectedMain.includes('MGL')" class="card p-4 mb-4 sub-section">
-      <div class="section-header">
-        <span class="badge bg-primary badge-label">MOSD Sub-Approvers</span>
-      </div>
-      <div v-for="sub in subCheckboxes" :key="sub.value" class="form-check ms-2 mb-2">
-        <input class="form-check-input" type="checkbox" :id="sub.value" :value="sub.value" v-model="selectedSub">
-        <label class="form-check-label" :for="sub.value">{{ sub.label }}</label>
-      </div>
-    </div>
-
-    <div v-if="selectedMain.includes('KMV')" class="card p-4 mb-4 sub-section">
-      <div class="section-header">
-        <span class="badge bg-success badge-label">BCM Sub-Approvers</span>
-      </div>
-      <div v-for="sub in subCheckboxes1" :key="sub.value" class="form-check ms-2 mb-2">
-        <input class="form-check-input" type="checkbox" :id="sub.value" :value="sub.value" v-model="selectedSub">
-        <label class="form-check-label" :for="sub.value">{{ sub.label }}</label>
-      </div>
-    </div>
-
-    <div v-if="selectedMain.includes('LDA')" class="card p-4 mb-4 sub-section">
-      <div class="section-header">
-        <span class="badge bg-danger badge-label">LEASING Sub-Approvers</span>
-      </div>
-      <div v-for="sub in subCheckboxes2" :key="sub.value" class="form-check ms-2 mb-2">
-        <input class="form-check-input" type="checkbox" :id="sub.value" :value="sub.value" v-model="selectedSub">
-        <label class="form-check-label" :for="sub.value">{{ sub.label }}</label>
-      </div>
-    </div>
-
-    <!-- Approval Summary -->
-    <div class="card p-4 mt-4">
-      <div class="section-header">
-        <i class="bi bi-check2-circle"></i> Approval Summary
-      </div>
-
-      <div v-if="approvalSummary.length">
-        <div v-for="(item, index) in approvalSummary" :key="index" class="mb-3">
-          <h6 class="mb-1"><i class="bi bi-building"></i> {{ item.department }}</h6>
-          <ul class="list-group list-group-sm">
-            <li v-for="person in item.approvers" :key="person" class="list-group-item py-1 px-3">
-              <i class="bi bi-person-check text-primary me-2"></i> {{ person }}
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div v-else class="text-muted">
-        No department head/s or sub-approver/s selected.
-      </div>
-    </div>
-
-    <!-- User Info -->
-
-    <!-- File Upload & Submit -->
-    <div class="card p-4 mt-4">
-      <div class="section-header mb-3">
-        <i class="bi bi-upload"></i> Upload Memo Document
-      </div>
-
-      <!-- Resubmission Checkbox -->
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" id="resubmissionCheck" v-model="isResubmission">
-        <label class="form-check-label" for="resubmissionCheck">
-      Resubmission for approval?
-    </label>
-      </div>
-
-      <!-- Primary File Upload -->
-      <div class="mb-3">
-        <label for="extraFile" class="form-label">Attach Memo document</label>
-        <input type="file" class="form-control" accept="application/pdf" @change="handleFileUpload">
-        <small class="text-muted">Only PDF files up to 32MB are allowed.</small>
-      </div>
-
-      <!-- Extra Upload Field if Resubmission is checked -->
-      <div class="mb-3" v-if="isResubmission">
-        <label for="extraFile" class="form-label">Attach Disapproval Page Document</label>
-        <input type="file" class="form-control" id="extraFile" accept="application/pdf" @change="handleRevisedFileUpload">
-        <small class="text-muted">Only PDF files up to 32MB are allowed.</small>
-      </div>
-
-      <div v-if="fileError" class="alert alert-danger py-2">
-        {{ fileError }}
-      </div>
-
-      <div v-if="loading" class="d-flex align-items-center text-primary mb-3">
-        <div class="spinner-border me-2" role="status" aria-hidden="true"></div>
-        <strong>Submitting memo, please wait...</strong>
-      </div>
-
-      <button class="btn btn-primary" :disabled="loading" @click="submitForm">
-    <span v-if="!loading"><i class="bi bi-send"></i> Submit Approval Request</span>
-    <span v-else><i class="bi bi-clock-history"></i> Submitting...</span>
-  </button>
-    </div>
-
-    <div v-if="generatedRefNumber" class="alert alert-success mt-3">
-      <strong>Reference Number:</strong> {{ generatedRefNumber }}
-    </div>
-
-  </div>
-
-  <script>
-    // Clear cookies
-  function clearCookies() {
-    document.cookie.split(";").forEach(function(cookie) {
-      const eqPos = cookie.indexOf("=");
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-    });
-    console.log("Cookies cleared.");
-  }
-
-  // Track user activity
-  let inactivityTimer;
-  function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-      clearCookies();
-      console.log("User inactive for 5 mins. Cookies cleared.");
-    }, 5 * 60 * 1000); // 5 minutes
-  }
-
-  // Reset timer on any interaction
-  ['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(evt =>
-    document.addEventListener(evt, resetInactivityTimer)
-  );
-  resetInactivityTimer(); // Start timer on page load
-
-  // Clear cookies on page unload
-  window.addEventListener("beforeunload", () => {
-    clearCookies();
-  });
-    new Vue({
-      el: '#app',
-      data: {
-        mainCheckboxes: [
-          { label: 'Graham Coates', value: 'GMC' },
-          { label: 'Rosalyn Segura', value: 'RCS' },
-          { label: 'Michael Lao', value: 'MGL' },
-          { label: 'Tinay Villanueva', value: 'KMV' },
-          { label: 'Lorence Aurelio', value: 'LDA' }
-        ],
-        subCheckboxes: [
-          { label: 'Jaye Pizarro', value: 'JAYE' },
-          { label: 'Joy Melitante', value: 'JOY' },
-          { label: 'Alex Flores', value: 'ALEX' },
-          { label: 'Aurora Pastolero', value: 'AU' },
-          { label: 'Mariano Caleja', value: 'MAR' }
-        ],
-        subCheckboxes1: [
-          { label: 'Ernesto "Bimbo" Andrade', value: 'EBA' },
-          { label: 'Dustin Sta. Maria', value: 'DSM' },
-          { label: 'Jenel Ann Cruzgarcia', value: 'JAC' },
-          { label: 'Doreen Penilla', value: 'DP' }
-        ],
-        subCheckboxes2: [
-          { label: 'Frances Armian', value: 'FA' },
-          { label: 'Denisse Malong', value: 'DM' },
-          { label: 'Kevin Lin', value: 'KL' },
-          { label: 'Juvi Masilungan', value: 'JM' },
-          { label: 'Jhoanalyn Gatdula', value: 'JG' },
-          { label: 'Mary Arceo', value: 'MA' }
-        ],
-        extraOptions: [
-          {label:'Alabang West',value:'AW'},
-{label:'Arcovia City',value:'AC'},
-{label:'Broadway Centrum',value:'BC'},
-{label:'Boracay Newcoast',value:'BN'},
-{label:'California Garden Square',value:'CGS'},
-{label:'The Clubhouse Temple Drive',value:'CTD'},
-{label:'Clark Cityfront',value:'CCF'},
-{label:'Capital Town',value:'CT'},
-{label:'Eastwood City',value:'EWC'},
-{label:'Forbes Town',value:'FT'},
-{label:'Iloilo Business Park',value:'IBP'},
-{label:'Lucky Chinatown',value:'LCT'},
-{label:'McKinley Hill',value:'MKH'},
-{label:'Maple Grove',value:'MG'},
-{label:'Newport City',value:'NP'},
-{label:'Paseo Center',value:'PC'},
-{label:'San Antonio Place',value:'SAP'},
-{label:'Three Central Makati',value:'TCM'},
-{label:'San Lorenzo Place',value:'SLP'},
-{label:'Southwoods',value:'SW'},
-{label:'Twin Lakes',value:'TL'},
-{label:'The Mactan Newtown',value:'TMN'},
-{label:'The Upper East House',value:'TUE'},
-{label:'Uptown Bonifacio',value:'UB'},
-{label:'Village Square',value:'VS'},
-{label:'Westside City',value:'WSC'},
-        ],
-        generatedRefNumber: '',
-        otherExtraOption: '', 
-        selectedMain: [],
-        selectedSub: [],
-        selectedExtras: [],
-        formData: {
-          name: '',
-          email: '',
-          email1: '',
-          memoType: '',
-          dateType:'',
-          additionalMemoInfo: ''
-        },
-        uploadedFile: null,
-        isResubmission: false,
-        revisedFile: null,
-        fileError: '',
-        loading: false
-      },
-      computed: {
-        approvalSummary() {
-          const map = {
-            MGL: this.subCheckboxes,
-            KMV: this.subCheckboxes1,
-            LDA: this.subCheckboxes2
-          };
-          const summary = [];
-          this.selectedMain.forEach(dept => {
-            const approvers = (map[dept] || [])
-              .filter(p => this.selectedSub.includes(p.value))
-              .map(p => p.label);
-            summary.push({
-              department: dept,
-              approvers: approvers.length ? approvers : ['No approvers selected']
-            });
-          });
-          return summary;
-        },
-          isFormValid() {
-          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          const hasExtras = this.selectedExtras.length > 0 || this.otherExtraOption.trim() !== '';
+    <script>
+    
+      const app = new Vue({
+        el: "#app",
+        data() {
+          return {
+            headers: [],
+            tableData: [],
+            greetingMessage: "",
+            showReasonInput: false,
+            reason: "",
+            showApprovalInput: false,
+            approvalReason: "",
+            showAddApproverInput: false,
+            selectedRow: null,
+            labelValue: "",
+            searchQuery: "",
+            isLoggedIn: false,
+            isDataLoaded: false,
+            loginError: false,
+            username: "",
+            password: "",
+            sheetName: "",
+            displayName: "",
+            isLoggingIn: false,
+            isSubmitting: false,
           
-          const isFileValid = this.isResubmission 
-            ? this.revisedFile !== null  // Check for revised file if resubmission is true
-            : this.uploadedFile !== null;  // Otherwise check for the main uploaded file
+            lastFetchedTime: null,
+            idleTimer: null,
+            idleTimeout: 600000,
+            approvingRowIndex: null,
+            selectedApproverReasons: [],
+            altervalueMichael: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueJaye: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueJoy: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
 
-          return (
-            this.selectedMain.length > 0 &&
-            hasExtras &&
-            isFileValid &&  // Validate based on the type of file required
-            this.formData.name.trim() !== '' &&
-            emailPattern.test(this.formData.email) &&
-            emailPattern.test(this.formData.email1) &&
-            this.formData.memoType !== '' &&
-            this.formData.dateType !== '' &&
-            this.formData.additionalMemoInfo.trim() !== ''
-          );
-        }
+            altervalueGmc: [
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueRcs: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueKmv: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueLda: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueAlex: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueAu: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueMar: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueEba: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueDsm: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueJac: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueDp: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueDm: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueFa: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueKl: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueJm: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueJg: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "MARY ARCEO", value: "MA" },
+            ],
+            altervalueMa: [
+              { label: "GRAHAM COATES", value: "GMC" },
+              { label: "ROSALYN SEGURA", value: "RCS" },
+              { label: "MICHAEL LAO", value: "MGL" },
+              { label: "TINAY VILLANUEVA", value: "KMV" },
+              { label: "LORENCE AURELIO", value: "LDA" },
+              { label: "JAYE PIZARRO", value: "JAYE" },
+              { label: "JOCELYN MELITANTE", value: "JOY" },
+              { label: "ALEX FLORES", value: "ALEX" },
+              { label: "AURORA PALOSTERO", value: "AU" },
+              { label: "MARIANO CALEJA", value: "MAR" },
+              { label: "ERNESTO ANDRADE", value: "EBA" },
+              { label: "DUSTIN STA. MARIA", value: "DSM" },
+              { label: "JENEL ANN CRUZGARCIA", value: "JAC" },
+              { label: "DOREEN PENILLA", value: "DP" },
+              { label: "FRANCES ARMIAN", value: "FA" },
+              { label: "DENISSE MALONG", value: "DM" },
+              { label: "KEVIN LIN", value: "KL" },
+              { label: "JUVI MASILUNGAN", value: "JM" },
+              { label: "JHOANALYN GATDULA", value: "JG" },
+            ],
+          };
+        },
+        computed: {
+          selectedApproverLabels() {
+            return this.availableApproverReasons
+              .filter((reason) =>
+                this.selectedApproverReasons.includes(reason.value)
+              )
+              .map((reason) => reason.label);
+          },
+          availableApproverReasons() {
+            const approverMap = {
+              "Michael Lao": this.altervalueMichael,
+              "Jaye Pizarro": this.altervalueJaye,
+              "Jocelyn Melitante": this.altervalueJoy,
+              "Graham Coates": this.altervalueGmc,
+              "Rosalyn Segura": this.altervalueRcs,
+              "Tinay Villanueva": this.altervalueKmv,
+              "Lorence Aurelio": this.altervalueLda,
+              "Alex Flores": this.altervalueAlex,
+              "Aurora Palostero": this.altervalueAu,
+              "Mariano Caleja": this.altervalueMar,
+              "Ernesto Andrade": this.altervalueEba,
+              "Dustin Sta. Maria": this.altervalueDsm,
+              "Jenel Ann Cruzgarcia": this.altervalueJac,
+              "Doreen Penilla": this.altervalueDp,
+              "Frances Armian": this.altervalueFa,
+              "Denisse Malong": this.altervalueDm,
+              "Kevin Lin": this.altervalueKl,
+              "Juvi Masilungan": this.altervalueJm,
+              "Jhoanalyn Gatdula": this.altervalueJg,
+              "Mary Arceothis": this.altervalueMa,
+            };
+            return approverMap[this.displayName] || [];
+          },
+          filteredData() {
+            const query = this.searchQuery.toLowerCase().trim();
+            return !query
+              ? this.tableData
+              : this.tableData.filter((row) =>
+                  row.some((cell) => String(cell).toLowerCase().includes(query))
+                );
+          },
+          isFormValid() {
+            const usernameValid = /^[A-Za-z0-9@.]+$/.test(this.username);
+            const passwordValid = /^[A-Za-z0-9@.]+$/.test(this.password);
+            return (
+              usernameValid &&
+              passwordValid &&
+              this.username.trim() !== "" &&
+              this.password.trim() !== ""
+            );
+          },
+        },
+        watch: {
+          selectedApproverReasons(newVal) {
+            console.log("Selected Approvers:", newVal);
+          },
+        },
 
-      },
-      methods: {
-         handleRevisedFileUpload(event) {
-        const file = event.target.files[0];
-        this.fileError = ''; // Reset any previous errors
+        methods: {
+          handleSubmitAndRefresh() {
+            this.submitAddApprover(); // Submit data
+            setTimeout(() => {
+              this.refreshDatasec(); // Refresh table after 3 seconds
+            }, 3000);
+          },
+          submitAddApprover() {
+            if (
+              !this.selectedRow ||
+              this.selectedApproverReasons.length === 0
+            ) {
+              console.error("No row selected or no approvers selected.");
+              return;
+            }
 
-        if (file) {
-          if (file.type !== "application/pdf") {
-            this.fileError = "Only PDF files are allowed.";
-            this.revisedFile = null;
-            return;
-          }
+            const allApprovers = [
+              ...this.altervalueMichael,
+              ...this.altervalueJaye,
+              ...this.altervalueJoy,
+              ...this.altervalueGmc,
+              ...this.altervalueRcs,
+              ...this.altervalueKmv,
+              ...this.altervalueLda,
+              ...this.altervalueAlex,
+              ...this.altervalueAu,
+              ...this.altervalueMar,
+              ...this.altervalueEba,
+              ...this.altervalueDsm,
+              ...this.altervalueJac,
+              ...this.altervalueDp,
+              ...this.altervalueDm,
+              ...this.altervalueFa,
+              ...this.altervalueKl,
+              ...this.altervalueJm,
+              ...this.altervalueJg,
+              ...this.altervalueMa,
+            ];
 
-          if (file.size > 32 * 1024 * 1024) {
-            this.fileError = "File exceeds the 32MB size limit.";
-            this.revisedFile = null;
-            return;
-          }
+            const payload = {
+              referenceNumber: this.selectedRow?.[0],
+              approverValues: this.selectedApproverReasons
+                .map((approverCode) => {
+                  const match = allApprovers.find(
+                    (opt) => opt.value === approverCode
+                  );
+                  return match
+                    ? { label: match.label, value: match.value }
+                    : null;
+                })
+                .filter(Boolean),
+            };
 
-          this.revisedFile = file;
-        }
-      },
-      handleFileUpload(event) {
-        const file = event.target.files[0];
-        this.fileError = '';
-        if (file) {
-          if (file.type !== "application/pdf") {
-            this.fileError = "Only PDF files are allowed.";
-            this.uploadedFile = null;
-            return;
-          }
-          if (file.size > 32 * 1024 * 1024) {
-            this.fileError = "File exceeds the 32MB size limit.";
-            this.uploadedFile = null;
-            return;
-          }
-          this.uploadedFile = file;
-        }
-      },
-      submitForm() {
-  if (!this.isFormValid) {
-    alert("Please complete all required fields and upload a valid file.");
-    return;
-  }
+            console.log("Final Payload:", payload);
 
-  this.loading = true;
+            if (payload.approverValues.length === 0) {
+              alert("None of the selected approvers are valid.");
+              return;
+            }
 
-  const readFileAsBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
+            this.isSubmitting = true;
 
-  Promise.all([
-    readFileAsBase64(this.uploadedFile),
-    this.isResubmission && this.revisedFile ? readFileAsBase64(this.revisedFile) : Promise.resolve(null)
-  ])
-    .then(([originalBase64, revisedBase64]) => {
-      const payload = {
-        name: this.formData.name,
-        email: this.formData.email,
-        memoType: this.formData.memoType,
-        email1: this.formData.email1,
-        dateType: this.formData.dateType,
-        additionalMemoInfo: this.formData.additionalMemoInfo,
-        otherExtraOption: this.otherExtraOption,
-        departments: this.selectedMain,
-        approvers: this.selectedSub,
-        additionalOptions: this.selectedExtras,
-        fileName: this.uploadedFile.name,
-        fileData: originalBase64,
-        isResubmission: this.isResubmission,
-        revisedFileName: this.isResubmission ? this.revisedFile?.name : '',
-        revisedFileData: revisedBase64
-      };
+            google.script.run
+              .withSuccessHandler(() => {
+                this.isSubmitting = false;
+                alert("Approver(s) added successfully.");
+                this.cancelAddApprover();
+              })
+              .withFailureHandler((error) => {
+                this.isSubmitting = false;
+                console.error("Error adding approvers:", error);
+                alert(error.message || "Failed to add approver(s).");
+              })
+              .submitApproverValues(payload);
+          },
 
-      google.script.run
-        .withSuccessHandler((refNumber) => {
-          this.loading = false;
-          alert(`Memo submitted successfully!\n\nPlease save this Memo Reference Number: ${refNumber}`);
-          this.generatedRefNumber = refNumber;
+          cancelAddApprover() {
+            this.showAddApproverInput = false;
+            this.selectedApproverReasons = [];
+            this.selectedRow = null;
+          },
+          addapprev(row) {
+            this.selectedRow = row;
+            this.showAddApproverInput = true;
+            this.selectedApproverReasons = [];
+            this.labelValue = row[6]; // Display the reference number (column E)
+          },
+          calculateDaysDifference(dateString) {
+            const today = new Date();
+            const date = new Date(dateString);
 
-          // Reset form
-          this.formData.memoType = "";
-          this.formData.email1 = "";
-          this.formData.dateType = "";
-          this.formData.additionalMemoInfo = "";
-          this.otherExtraOption = "";
-          this.selectedMain = [];
-          this.selectedSub = [];
-          this.selectedExtras = [];
-          this.uploadedFile = null;
-          this.revisedFile = null;
-        })
-        .withFailureHandler(error => {
-          this.loading = false;
-          alert("Submission failed: " + error.message);
-        })
-        .processFormData(payload);
-    })
-    .catch((error) => {
-      this.loading = false;
-      alert("Failed to read file(s): " + error.message);
-    });
-},
+            // Ensure the date is valid
+            if (isNaN(date)) return "Invalid Date";
 
+            const timeDifference = today - date; // Difference in milliseconds
+            const daysDifference = Math.floor(
+              timeDifference / (1000 * 3600 * 24)
+            ); // Convert to days
 
-      getBase64FromFile(file) {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        return reader.result.split(',')[1]; // Return the base64-encoded string
-      }
-    }
-  });
-  </script>
-</body>
+            return daysDifference;
+          },
+          refreshData() {
+            this.isDataLoaded = false;
 
+            google.script.run
+              .withSuccessHandler((data) => {
+                if (data && data.length > 0) {
+                  const selectedColumnIndices = [
+                    5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0,
+                  ];
+
+                  this.headers = selectedColumnIndices.map(
+                    (index) => data[0][index]
+                  );
+
+                  const filteredRows = data
+                    .slice(1)
+                    .map((row) =>
+                      selectedColumnIndices.map((index) => row[index])
+                    );
+
+                  this.tableData = filteredRows;
+              
+                  this.lastFetchedTime = new Date().getTime();
+                }
+                this.isDataLoaded = true;
+              })
+              .getSheetData(this.sheetName);
+          },
+
+          refreshDatasec() {
+            google.script.run
+              .withSuccessHandler((data) => {
+                if (data && data.length > 0) {
+                  const selectedColumnIndices = [
+                    5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0,
+                  ];
+
+                  this.headers = selectedColumnIndices.map(
+                    (index) => data[0][index]
+                  );
+
+                  const filteredRows = data
+                    .slice(1)
+                    .map((row) =>
+                      selectedColumnIndices.map((index) => row[index])
+                    );
+
+                  this.tableData = filteredRows;
+              
+                  this.lastFetchedTime = new Date().getTime();
+                }
+              })
+              .getSheetData(this.sheetName);
+          },
+
+          cancelApproval() {
+            this.showApprovalInput = false;
+            this.approvalReason = "";
+            this.selectedRow = null;
+          },
+
+          cancelDisapproval() {
+            this.showReasonInput = false;
+            this.reason = "";
+            this.selectedRow = null;
+          },
+          addApproverReviewer(row) {
+            this.showAddApproverInput = true;
+            this.selectedRow = row;
+            this.labelValue = row[6]; // adjust index if needed
+            this.reason = "";
+            this.$nextTick(() => {
+              const textarea =
+                this.$refs.reasonInputSection?.querySelector("textarea");
+              textarea?.focus();
+            });
+          },
+
+          approve(row) {
+            if (!confirm(`Do you want to approve "${row[6]}"?`)) return;
+            this.showReasonInput = false;
+            this.showApprovalInput = true;
+            this.selectedRow = row;
+            this.labelValue = row[6];
+            this.approvalReason = "";
+            this.$nextTick(() => {
+              const textarea =
+                this.$refs.approvalInputSection?.querySelector("textarea");
+              textarea?.focus();
+            });
+          },
+
+          disapprove(row) {
+            if (!confirm(`Are you sure you want to disapprove "${row[6]}"?`))
+              return;
+            this.showApprovalInput = false;
+            this.showReasonInput = true;
+            this.selectedRow = row;
+            this.labelValue = row[6];
+            this.reason = "";
+            this.$nextTick(() => {
+              const textarea =
+                this.$refs.reasonInputSection?.querySelector("textarea");
+              textarea?.focus();
+            });
+          },
+
+          submitApproval() {
+            if (!this.approvalReason.trim()) {
+              alert("Please enter remarks before submitting.");
+              return;
+            }
+
+            const specialApprovers = ["Louise Piamonte"]; // add all display names here
+            let finalApprovalReason = this.approvalReason;
+
+            if (specialApprovers.includes(this.displayName)) {
+              finalApprovalReason = "<" + finalApprovalReason.trim() + ">";
+            }
+
+            this.isSubmitting = true;
+            const index = this.tableData.indexOf(this.selectedRow);
+            google.script.run
+              .withSuccessHandler(() => {
+                alert(this.selectedRow[6] + " approved successfully!");
+                this.tableData.splice(index, 1);
+                this.showApprovalInput = false;
+                this.approvalReason = "";
+                this.isSubmitting = false;
+              })
+              .withFailureHandler((error) => {
+                alert("Error approving row: " + error.message);
+                this.isSubmitting = false;
+              })
+              .updateRowStatusWithValidation(
+                this.selectedRow,
+                "APPROVED",
+                "", // disapproval reason
+                finalApprovalReason, // modified approval remarks
+                this.sheetName
+              );
+          },
+
+          submitDisapproval() {
+            if (!this.reason.trim()) {
+              alert("Please enter a reason before submitting.");
+              return;
+            }
+
+            const specialApprovers = ["Louise Piamonte"]; // Add all display names here
+            let finalReason = this.reason;
+
+            if (specialApprovers.includes(this.displayName)) {
+              finalReason = "<" + finalReason.trim() + ">";
+            }
+
+            this.isSubmitting = true;
+            const index = this.tableData.indexOf(this.selectedRow);
+            google.script.run
+              .withSuccessHandler(() => {
+                alert(this.selectedRow[6] + " disapproved successfully!");
+                this.tableData.splice(index, 1);
+                this.showReasonInput = false;
+                this.reason = "";
+                this.isSubmitting = false;
+              })
+              .withFailureHandler((error) => {
+                alert("Error disapproving row: " + error.message);
+                this.isSubmitting = false;
+              })
+              .updateRowStatusWithValidation(
+                this.selectedRow,
+                "DISAPPROVED",
+                finalReason, // modified disapproval reason
+                "", // no approval remarks
+                this.sheetName
+              );
+          },
+
+          setGreeting() {
+            const hour = new Date().getHours();
+            this.greetingMessage =
+              hour < 12
+                ? `Good Morning, ${this.displayName}!`
+                : hour < 18
+                ? `Good Afternoon, ${this.displayName}!`
+                : `Good Evening, ${this.displayName}!`;
+          },
+
+          login() {
+            if (!this.isFormValid) {
+              this.loginError = true;
+              return;
+            }
+            this.isLoggingIn = true;
+            google.script.run
+              .withSuccessHandler((userData) => {
+                this.isLoggingIn = false;
+                if (userData && userData.sheet) {
+                  this.isLoggedIn = true;
+                  this.sheetName = userData.sheet;
+                  this.displayName = userData.displayName || this.username;
+                  this.setGreeting();
+                  this.refreshData();
+                  this.resetIdleTimer();
+                } else {
+                  this.loginError = true;
+                  alert("Invalid login: Unauthorize Approver.");
+                }
+              })
+              .withFailureHandler((error) => {
+                this.isLoggingIn = false;
+                alert("Error during login: " + error.message);
+              })
+              .authenticateUser(this.username, this.password);
+          },
+
+          resetIdleTimer() {
+            if (!this.isLoggedIn) return; // Prevent setting timer if not logged in
+
+            clearTimeout(this.idleTimer);
+            this.idleTimer = setTimeout(() => {
+              if (this.isLoggedIn) {
+                // Double-check at timeout execution
+                alert("You have been logged out due to inactivity.");
+                this.logout();
+              }
+            }, this.idleTimeout);
+          },
+
+          logout() {
+            if (this.isLoggedIn) {
+              alert("You have been logged out.");
+            }
+            this.isLoggedIn = false;
+            this.username = "";
+            this.password = "";
+            this.tableData = [];
+    
+            this.lastFetchedTime = null;
+          },
+        },
+
+        mounted() {
+          window.addEventListener("mousemove", this.resetIdleTimer);
+          window.addEventListener("keydown", this.resetIdleTimer);
+          window.addEventListener("click", this.resetIdleTimer);
+          window.addEventListener("beforeunload", () => {
+            this.logout();
+            localStorage.clear();
+            sessionStorage.clear();
+          });
+        },
+      });
+    </script>
+  </body>
 </html>
